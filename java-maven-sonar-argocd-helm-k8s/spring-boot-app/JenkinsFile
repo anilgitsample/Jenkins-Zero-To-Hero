@@ -2,6 +2,10 @@ pipeline {
 
     agent any
 
+    tools {
+        maven 'Maven-3'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -12,8 +16,8 @@ pipeline {
 
         stage('Build and Test') {
             steps {
-                bat 'dir'
                 bat '''
+                dir
                 cd java-maven-sonar-argocd-helm-k8s\\spring-boot-app
                 mvn clean package
                 '''
@@ -27,11 +31,14 @@ pipeline {
             }
 
             steps {
-                withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
+                withCredentials([string(credentialsId: 'sonarqube',
+                variable: 'SONAR_AUTH_TOKEN')]) {
 
                     bat '''
                     cd java-maven-sonar-argocd-helm-k8s\\spring-boot-app
-                    mvn sonar:sonar -Dsonar.login=%SONAR_AUTH_TOKEN% -Dsonar.host.url=%SONAR_URL%
+                    mvn sonar:sonar ^
+                    -Dsonar.login=%SONAR_AUTH_TOKEN% ^
+                    -Dsonar.host.url=%SONAR_URL%
                     '''
                 }
             }
@@ -50,9 +57,12 @@ pipeline {
         stage('Push Docker Image') {
 
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-cred',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS')]) {
+
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-cred',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
 
                     bat '''
                     docker login -u %DOCKER_USER% -p %DOCKER_PASS%
@@ -67,7 +77,10 @@ pipeline {
 
             steps {
 
-                withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                withCredentials([string(
+                    credentialsId: 'github',
+                    variable: 'GITHUB_TOKEN'
+                )]) {
 
                     bat '''
                     git config user.email "anilkumaru489@gmail.com"
