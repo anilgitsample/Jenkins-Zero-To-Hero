@@ -6,51 +6,53 @@ pipeline {
         maven 'Maven-3'
     }
 
+    environment {
+        SONAR_URL = "http://localhost:9000"
+        APP_DIR = "java-maven-sonar-argocd-helm-k8s\\spring-boot-app"
+        MANIFEST = "java-maven-sonar-argocd-helm-k8s\\spring-boot-app-manifests\\deployment.yml"
+    }
+
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                bat 'echo Checkout Stage Started'
+                checkout scm
             }
         }
 
         stage('Build and Test') {
             steps {
-                bat '''
-                dir
-                cd java-maven-sonar-argocd-helm-k8s\\spring-boot-app
+                bat """
+                cd %APP_DIR%
                 mvn clean package
-                '''
+                """
             }
         }
 
         stage('Static Code Analysis') {
-
-            environment {
-                SONAR_URL = "http://localhost:9000"
-            }
-
             steps {
-                withCredentials([string(credentialsId: 'sonarqube',
-                variable: 'SONAR_AUTH_TOKEN')]) {
 
-                    bat '''
-                    cd java-maven-sonar-argocd-helm-k8s\\spring-boot-app
+                withCredentials([string(
+                    credentialsId: 'sonarqube',
+                    variable: 'SONAR_AUTH_TOKEN'
+                )]) {
+
+                    bat """
+                    cd %APP_DIR%
                     mvn sonar:sonar ^
                     -Dsonar.login=%SONAR_AUTH_TOKEN% ^
                     -Dsonar.host.url=%SONAR_URL%
-                    '''
+                    """
                 }
             }
         }
 
         stage('Build Docker Image') {
-
             steps {
-                bat '''
-                cd java-maven-sonar-argocd-helm-k8s\\spring-boot-app
+                bat """
+                cd %APP_DIR%
                 docker build -t ultimate-cicd:%BUILD_NUMBER% .
-                '''
+                """
             }
         }
 
@@ -64,11 +66,11 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
 
-                    bat '''
+                    bat """
                     docker login -u %DOCKER_USER% -p %DOCKER_PASS%
                     docker tag ultimate-cicd:%BUILD_NUMBER% %DOCKER_USER%/ultimate-cicd:%BUILD_NUMBER%
                     docker push %DOCKER_USER%/ultimate-cicd:%BUILD_NUMBER%
-                    '''
+                    """
                 }
             }
         }
@@ -82,16 +84,18 @@ pipeline {
                     variable: 'GITHUB_TOKEN'
                 )]) {
 
-                    bat '''
+                    bat """
                     git config user.email "anilkumaru489@gmail.com"
                     git config user.name "anilgitsample"
 
-                    powershell -Command "(Get-Content java-maven-sonar-argocd-helm-k8s\\spring-boot-app-manifests\\deployment.yml) -replace 'replaceImageTag','%BUILD_NUMBER%' | Set-Content java-maven-sonar-argocd-helm-k8s\\spring-boot-app-manifests\\deployment.yml"
+                    powershell -Command "(Get-Content %MANIFEST%) -replace 'replaceImageTag','%BUILD_NUMBER%' | Set-Content %MANIFEST%"
 
-                    git add .
-                    git commit -m "Update deployment image %BUILD_NUMBER%"
+                    git add %MANIFEST%
+
+                    git commit -m "Update deployment image %BUILD_NUMBER%" || echo No changes
+
                     git push https://%GITHUB_TOKEN%@github.com/anilgitsample/Jenkins-Zero-To-Hero HEAD:main
-                    '''
+                    """
                 }
             }
         }
