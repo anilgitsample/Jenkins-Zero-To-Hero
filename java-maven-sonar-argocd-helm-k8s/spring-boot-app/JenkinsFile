@@ -90,9 +90,11 @@ pipeline {
                     git config user.email "anilkumaru489@gmail.com"
                     git config user.name "anilgitsample"
 
-                    powershell -Command "(Get-Content '%MANIFEST%') -replace 'replaceImageTag','%BUILD_NUMBER%' | Set-Content '%MANIFEST%'"
+                    powershell -Command ^
+                    "$file='%WORKSPACE%\\%MANIFEST%'; ^
+                    (Get-Content $file) -replace 'replaceImageTag','%BUILD_NUMBER%' ^| Set-Content $file"
 
-                    git add %MANIFEST%
+                    git add .
 
                     git commit -m "Update deployment image %BUILD_NUMBER%" || echo No changes
 
