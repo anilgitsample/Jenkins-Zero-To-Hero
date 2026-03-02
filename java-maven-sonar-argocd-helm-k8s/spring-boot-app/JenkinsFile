@@ -68,7 +68,9 @@ pipeline {
 
                     bat """
                     docker login -u %DOCKER_USER% -p %DOCKER_PASS%
+
                     docker tag ultimate-cicd:%BUILD_NUMBER% %DOCKER_USER%/ultimate-cicd:%BUILD_NUMBER%
+
                     docker push %DOCKER_USER%/ultimate-cicd:%BUILD_NUMBER%
                     """
                 }
@@ -88,7 +90,7 @@ pipeline {
                     git config user.email "anilkumaru489@gmail.com"
                     git config user.name "anilgitsample"
 
-                    powershell -Command "(Get-Content %MANIFEST%) -replace 'replaceImageTag','%BUILD_NUMBER%' | Set-Content %MANIFEST%"
+                    powershell -Command "(Get-Content '%MANIFEST%') -replace 'replaceImageTag','%BUILD_NUMBER%' | Set-Content '%MANIFEST%'"
 
                     git add %MANIFEST%
 
